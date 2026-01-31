@@ -1,0 +1,209 @@
+import sqlite3
+from datetime import datetime
+
+# --- Database Setup ---
+conn = sqlite3.connect('hospital.db')
+c = conn.cursor()
+
+# Create tables
+c.execute('''
+CREATE TABLE IF NOT EXISTS patients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    age INTEGER,
+    gender TEXT,
+    contact TEXT,
+    medical_history TEXT
+)
+''')
+
+c.execute('''
+CREATE TABLE IF NOT EXISTS staff (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    role TEXT,
+    department TEXT,
+    contact TEXT
+)
+''')
+
+c.execute('''
+CREATE TABLE IF NOT EXISTS appointments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    patient_id INTEGER,
+    staff_id INTEGER,
+    date TEXT,
+    time TEXT,
+    FOREIGN KEY(patient_id) REFERENCES patients(id),
+    FOREIGN KEY(staff_id) REFERENCES staff(id)
+)
+''')
+
+# --- Patient Functions ---
+def add_patient():
+    name = input("Name: ")
+    age = input("Age: ")
+    gender = input("Gender: ")
+    contact = input("Contact: ")
+    history = input("Medical history: ")
+    c.execute(
+        "INSERT INTO patients (name, age, gender, contact, medical_history) VALUES (?, ?, ?, ?, ?)",
+        (name, age, gender, contact, history)
+    )
+    conn.commit()
+    print("Patient added successfully.\n")
+
+def view_patients():
+    c.execute("SELECT * FROM patients")
+    for row in c.fetchall():
+        print(row)
+    print()
+
+def update_patient():
+    pid = input("Enter Patient ID to update: ")
+    c.execute("SELECT * FROM patients WHERE id=?", (pid,))
+    if c.fetchone() is None:
+        print("Patient not found.\n")
+        return
+    name = input("New Name: ")
+    age = input("New Age: ")
+    gender = input("New Gender: ")
+    contact = input("New Contact: ")
+    history = input("New Medical history: ")
+    c.execute(
+        "UPDATE patients SET name=?, age=?, gender=?, contact=?, medical_history=? WHERE id=?",
+        (name, age, gender, contact, history, pid)
+    )
+    conn.commit()
+    print("Patient updated successfully.\n")
+
+def delete_patient():
+    pid = input("Enter Patient ID to delete: ")
+    c.execute("DELETE FROM patients WHERE id=?", (pid,))
+    conn.commit()
+    print("Patient deleted successfully.\n")
+
+# --- Staff Functions ---
+def add_staff():
+    name = input("Name: ")
+    role = input("Role (Doctor/Nurse/etc): ")
+    dept = input("Department: ")
+    contact = input("Contact: ")
+    c.execute(
+        "INSERT INTO staff (name, role, department, contact) VALUES (?, ?, ?, ?)",
+        (name, role, dept, contact)
+    )
+    conn.commit()
+    print("Staff added successfully.\n")
+
+def view_staff():
+    c.execute("SELECT * FROM staff")
+    for row in c.fetchall():
+        print(row)
+    print()
+
+def update_staff():
+    sid = input("Enter Staff ID to update: ")
+    c.execute("SELECT * FROM staff WHERE id=?", (sid,))
+    if c.fetchone() is None:
+        print("Staff not found.\n")
+        return
+    name = input("New Name: ")
+    role = input("New Role: ")
+    dept = input("New Department: ")
+    contact = input("New Contact: ")
+    c.execute(
+        "UPDATE staff SET name=?, role=?, department=?, contact=? WHERE id=?",
+        (name, role, dept, contact, sid)
+    )
+    conn.commit()
+    print("Staff updated successfully.\n")
+
+def delete_staff():
+    sid = input("Enter Staff ID to delete: ")
+    c.execute("DELETE FROM staff WHERE id=?", (sid,))
+    conn.commit()
+    print("Staff deleted successfully.\n")
+
+# --- Appointment Functions ---
+def schedule_appointment():
+    view_patients()
+    pid = input("Select Patient ID: ")
+    view_staff()
+    sid = input("Select Staff ID: ")
+    date = input("Date (YYYY-MM-DD): ")
+    time = input("Time (HH:MM): ")
+
+    # Basic validation
+    try:
+        datetime.strptime(date, "%Y-%m-%d")
+        datetime.strptime(time, "%H:%M")
+    except:
+        print("Invalid date or time format.\n")
+        return
+
+    c.execute(
+        "INSERT INTO appointments (patient_id, staff_id, date, time) VALUES (?, ?, ?, ?)",
+        (pid, sid, date, time)
+    )
+    conn.commit()
+    print("Appointment scheduled successfully.\n")
+
+def view_appointments():
+    c.execute('''
+        SELECT a.id, p.name, s.name, a.date, a.time
+        FROM appointments a
+        JOIN patients p ON a.patient_id = p.id
+        JOIN staff s ON a.staff_id = s.id
+    ''')
+    for row in c.fetchall():
+        print(row)
+    print()
+
+def cancel_appointment():
+    aid = input("Enter Appointment ID to cancel: ")
+    c.execute("DELETE FROM appointments WHERE id=?", (aid,))
+    conn.commit()
+    print("Appointment canceled successfully.\n")
+
+# --- Main Menu ---
+def main_menu():
+    while True:
+        print("=== Hospital Management System ===")
+        print("1. Add Patient  2. View Patients  3. Update Patient  4. Delete Patient")
+        print("5. Add Staff    6. View Staff     7. Update Staff   8. Delete Staff")
+        print("9. Schedule Appointment  10. View Appointments  11. Cancel Appointment")
+        print("12. Exit")
+        choice = input("Enter choice: ")
+
+        if choice == '1':
+            add_patient()
+        elif choice == '2':
+            view_patients()
+        elif choice == '3':
+            update_patient()
+        elif choice == '4':
+            delete_patient()
+        elif choice == '5':
+            add_staff()
+        elif choice == '6':
+            view_staff()
+        elif choice == '7':
+            update_staff()
+        elif choice == '8':
+            delete_staff()
+        elif choice == '9':
+            schedule_appointment()
+        elif choice == '10':
+            view_appointments()
+        elif choice == '11':
+            cancel_appointment()
+        elif choice == '12':
+            print("Exiting system.")
+            break
+        else:
+            print("Invalid choice.\n")
+
+if __name__ == "__main__":
+    main_menu()
+    conn.close()
