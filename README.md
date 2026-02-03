@@ -8,10 +8,14 @@ Python-based hospital management system with SQLite database support. Manages pa
 
 
 Problem Solved
+
+
 Many clinics rely on paper records, which are slow, error-prone, and hard to track. This system digitizes record-keeping, allowing clinics to store, retrieve, and manage patient and staff information reliably.
 
 
 Features
+
+
 Add, view, update, and delete patients and staff
 Schedule, view, and manage appointments
 Input validation for dates, times, and fields
@@ -20,12 +24,14 @@ Menu-driven interface for easy navigation
 
 
 Tools Used
+
 Python 3
 SQLite database
 Standard Python libraries
 
 
 How to Run
+
 Open hospital_system.py in a Python 3 environment.
 The command-line menu displays numbered options for all operations.
 Enter the number of the desired action and follow the prompts.
@@ -38,6 +44,7 @@ Menu interface guides the user through all operations
 
 
 Skills Demonstrated
+
 Relational database design with SQLite
 CRUD operations (Create, Read, Update, Delete)
 Input validation and error handling
@@ -46,6 +53,7 @@ Practical application of Python for real-world problem solving
 
 
 Future Improvements
+
 Add graphical user interface
 User login and role-based permissions
 Reporting and statistics dashboard
