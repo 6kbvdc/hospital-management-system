@@ -2,6 +2,8 @@ Hospital Management System in Python
 
 
 Description
+
+
 Python-based hospital management system with SQLite database support. Manages patients, staff, and appointments through a command-line interface. Designed to improve clinic efficiency and record-keeping, demonstrating practical software design, relational database usage, and problem-solving skills.
 
 
