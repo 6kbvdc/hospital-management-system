@@ -47,7 +47,7 @@ What I learned:
 
 
 How I used AI(chat gpt):
-I used ChatGPT as a learning assistant to understand syntax, debug errors, and improve code structure. I designed and implemented the application myself.
+I used ChatGPT as a learning assistant to understand syntax, debug errors, and improve code structure. I designed and implemented the application.
 
 
 Author
