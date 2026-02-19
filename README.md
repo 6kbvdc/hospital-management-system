@@ -42,6 +42,8 @@ What I learned:
 • Input validation
 • Structuring larger programs
 • Building software for real world problems
+How I used AI(chat gpt):
+I used ChatGPT as a learning assistant to understand syntax, debug errors, and improve code structure. I designed and implemented the application myself.
 
 
 Author
