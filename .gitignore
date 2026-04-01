@@ -1,256 +1,27 @@
-import sqlite3
-from datetime import datetime
+# Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
 
-# --- Database Setup ---
-conn = sqlite3.connect("hospital.db")
-conn.execute("PRAGMA foreign_keys = ON")
-c = conn.cursor()
+# SQLite database file
+hospital.db
 
+# Virtual environment folders (if any)
+venv/
+env/
+*.env
 
-# ---------------- TABLES ----------------
-c.execute("""
-CREATE TABLE IF NOT EXISTS patients (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    age INTEGER NOT NULL,
-    gender TEXT,
-    contact TEXT,
-    medical_history TEXT
-)
-""")
+# IDE/editor files
+.idea/
+.vscode/
+*.swp
+*.swo
 
-c.execute("""
-CREATE TABLE IF NOT EXISTS staff (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    role TEXT,
-    department TEXT,
-    contact TEXT
-)
-""")
+# OS files
+.DS_Store
+Thumbs.db
 
-c.execute("""
-CREATE TABLE IF NOT EXISTS appointments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    patient_id INTEGER,
-    staff_id INTEGER,
-    date TEXT,
-    time TEXT,
-    FOREIGN KEY(patient_id) REFERENCES patients(id) ON DELETE CASCADE,
-    FOREIGN KEY(staff_id) REFERENCES staff(id) ON DELETE CASCADE
-)
-""")
-
-conn.commit()
-
-
-# ---------------- HELPERS ----------------
-def get_int(prompt):
-    try:
-        return int(input(prompt))
-    except:
-        print("Invalid number.\n")
-        return None
-
-
-# ---------------- PATIENTS ----------------
-def add_patient():
-    name = input("Name: ")
-    age = get_int("Age: ")
-    if age is None:
-        return
-    gender = input("Gender: ")
-    contact = input("Contact: ")
-    history = input("Medical history: ")
-
-    c.execute(
-        "INSERT INTO patients (name, age, gender, contact, medical_history) VALUES (?, ?, ?, ?, ?)",
-        (name, age, gender, contact, history)
-    )
-    conn.commit()
-    print("Added.\n")
-
-
-def view_patients():
-    rows = c.execute("SELECT * FROM patients").fetchall()
-    for r in rows:
-        print(r)
-    print()
-
-
-def update_patient():
-    pid = get_int("Patient ID: ")
-    if pid is None:
-        return
-
-    if not c.execute("SELECT id FROM patients WHERE id=?", (pid,)).fetchone():
-        print("Not found.\n")
-        return
-
-    name = input("New Name: ")
-    age = get_int("New Age: ")
-    if age is None:
-        return
-    gender = input("New Gender: ")
-    contact = input("New Contact: ")
-    history = input("New Medical history: ")
-
-    c.execute(
-        "UPDATE patients SET name=?, age=?, gender=?, contact=?, medical_history=? WHERE id=?",
-        (name, age, gender, contact, history, pid)
-    )
-    conn.commit()
-    print("Updated.\n")
-
-
-def delete_patient():
-    pid = get_int("Patient ID: ")
-    if pid is None:
-        return
-    c.execute("DELETE FROM patients WHERE id=?", (pid,))
-    conn.commit()
-    print("Deleted.\n")
-
-
-# ---------------- STAFF ----------------
-def add_staff():
-    name = input("Name: ")
-    role = input("Role: ")
-    dept = input("Department: ")
-    contact = input("Contact: ")
-
-    c.execute(
-        "INSERT INTO staff (name, role, department, contact) VALUES (?, ?, ?, ?)",
-        (name, role, dept, contact)
-    )
-    conn.commit()
-    print("Added.\n")
-
-
-def view_staff():
-    rows = c.execute("SELECT * FROM staff").fetchall()
-    for r in rows:
-        print(r)
-    print()
-
-
-def update_staff():
-    sid = get_int("Staff ID: ")
-    if sid is None:
-        return
-
-    if not c.execute("SELECT id FROM staff WHERE id=?", (sid,)).fetchone():
-        print("Not found.\n")
-        return
-
-    name = input("New Name: ")
-    role = input("New Role: ")
-    dept = input("New Department: ")
-    contact = input("New Contact: ")
-
-    c.execute(
-        "UPDATE staff SET name=?, role=?, department=?, contact=? WHERE id=?",
-        (name, role, dept, contact, sid)
-    )
-    conn.commit()
-    print("Updated.\n")
-
-
-def delete_staff():
-    sid = get_int("Staff ID: ")
-    if sid is None:
-        return
-    c.execute("DELETE FROM staff WHERE id=?", (sid,))
-    conn.commit()
-    print("Deleted.\n")
-
-
-# ---------------- APPOINTMENTS ----------------
-def schedule_appointment():
-    view_patients()
-    pid = get_int("Patient ID: ")
-    if pid is None:
-        return
-
-    view_staff()
-    sid = get_int("Staff ID: ")
-    if sid is None:
-        return
-
-    date = input("Date YYYY-MM-DD: ")
-    time = input("Time HH:MM: ")
-
-    try:
-        datetime.strptime(date, "%Y-%m-%d")
-        datetime.strptime(time, "%H:%M")
-    except:
-        print("Invalid format.\n")
-        return
-
-    c.execute(
-        "INSERT INTO appointments (patient_id, staff_id, date, time) VALUES (?, ?, ?, ?)",
-        (pid, sid, date, time)
-    )
-    conn.commit()
-    print("Scheduled.\n")
-
-
-def view_appointments():
-    rows = c.execute("""
-        SELECT a.id, p.name, s.name, a.date, a.time
-        FROM appointments a
-        JOIN patients p ON a.patient_id = p.id
-        JOIN staff s ON a.staff_id = s.id
-    """).fetchall()
-
-    for r in rows:
-        print(r)
-    print()
-
-
-def cancel_appointment():
-    aid = get_int("Appointment ID: ")
-    if aid is None:
-        return
-    c.execute("DELETE FROM appointments WHERE id=?", (aid,))
-    conn.commit()
-    print("Canceled.\n")
-
-
-# ---------------- MENU ----------------
-def main_menu():
-    while True:
-        print("1 Add Patient  2 View Patients  3 Update Patient  4 Delete Patient")
-        print("5 Add Staff    6 View Staff     7 Update Staff    8 Delete Staff")
-        print("9 Schedule     10 View Appts    11 Cancel Appt    12 Exit")
-
-        choice = input("Choice: ")
-
-        actions = {
-            "1": add_patient,
-            "2": view_patients,
-            "3": update_patient,
-            "4": delete_patient,
-            "5": add_staff,
-            "6": view_staff,
-            "7": update_staff,
-            "8": delete_staff,
-            "9": schedule_appointment,
-            "10": view_appointments,
-            "11": cancel_appointment
-        }
-
-        if choice == "12":
-            conn.close()
-            print("Bye.")
-            break
-
-        action = actions.get(choice)
-        if action:
-            action()
-        else:
-            print("Invalid.\n")
-
-
-if __name__ == "__main__":
-    main_menu()
+# Logs
+*.log
