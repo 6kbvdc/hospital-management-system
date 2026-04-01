@@ -41,11 +41,25 @@ CREATE TABLE IF NOT EXISTS appointments (
 
 # --- Patient Functions ---
 def add_patient():
-    name = input("Name: ")
-    age = input("Age: ")
-    gender = input("Gender: ")
-    contact = input("Contact: ")
-    history = input("Medical history: ")
+    while True:
+        name = input("Name: ").strip()
+        if not name:
+            print("Name cannot be empty.")
+            continue
+        break
+
+    while True:
+        age = input("Age: ").strip()
+        if not age.isdigit() or int(age) <= 0:
+            print("Invalid age. Must be a positive number.")
+            continue
+        age = int(age)
+        break
+
+    gender = input("Gender: ").strip()
+    contact = input("Contact: ").strip()
+    history = input("Medical history: ").strip()
+
     c.execute(
         "INSERT INTO patients (name, age, gender, contact, medical_history) VALUES (?, ?, ?, ?, ?)",
         (name, age, gender, contact, history)
@@ -65,11 +79,11 @@ def update_patient():
     if c.fetchone() is None:
         print("Patient not found.\n")
         return
-    name = input("New Name: ")
-    age = input("New Age: ")
-    gender = input("New Gender: ")
-    contact = input("New Contact: ")
-    history = input("New Medical history: ")
+    name = input("New Name: ").strip()
+    age = input("New Age: ").strip()
+    gender = input("New Gender: ").strip()
+    contact = input("New Contact: ").strip()
+    history = input("New Medical history: ").strip()
     c.execute(
         "UPDATE patients SET name=?, age=?, gender=?, contact=?, medical_history=? WHERE id=?",
         (name, age, gender, contact, history, pid)
@@ -83,12 +97,31 @@ def delete_patient():
     conn.commit()
     print("Patient deleted successfully.\n")
 
+def search_patient():
+    keyword = input("Enter name or contact to search: ").strip()
+    c.execute(
+        "SELECT * FROM patients WHERE name LIKE ? OR contact LIKE ?",
+        ('%' + keyword + '%', '%' + keyword + '%')
+    )
+    results = c.fetchall()
+    if results:
+        print("Search Results:")
+        for row in results:
+            print(row)
+    else:
+        print("No patients found matching that keyword.\n")
+
 # --- Staff Functions ---
 def add_staff():
-    name = input("Name: ")
-    role = input("Role (Doctor/Nurse/etc): ")
-    dept = input("Department: ")
-    contact = input("Contact: ")
+    while True:
+        name = input("Name: ").strip()
+        if not name:
+            print("Name cannot be empty.")
+            continue
+        break
+    role = input("Role (Doctor/Nurse/etc): ").strip()
+    dept = input("Department: ").strip()
+    contact = input("Contact: ").strip()
     c.execute(
         "INSERT INTO staff (name, role, department, contact) VALUES (?, ?, ?, ?)",
         (name, role, dept, contact)
@@ -108,10 +141,10 @@ def update_staff():
     if c.fetchone() is None:
         print("Staff not found.\n")
         return
-    name = input("New Name: ")
-    role = input("New Role: ")
-    dept = input("New Department: ")
-    contact = input("New Contact: ")
+    name = input("New Name: ").strip()
+    role = input("New Role: ").strip()
+    dept = input("New Department: ").strip()
+    contact = input("New Contact: ").strip()
     c.execute(
         "UPDATE staff SET name=?, role=?, department=?, contact=? WHERE id=?",
         (name, role, dept, contact, sid)
@@ -134,7 +167,6 @@ def schedule_appointment():
     date = input("Date (YYYY-MM-DD): ")
     time = input("Time (HH:MM): ")
 
-    # Basic validation
     try:
         datetime.strptime(date, "%Y-%m-%d")
         datetime.strptime(time, "%H:%M")
@@ -166,6 +198,22 @@ def cancel_appointment():
     conn.commit()
     print("Appointment canceled successfully.\n")
 
+# --- System Stats ---
+def system_stats():
+    c.execute("SELECT COUNT(*) FROM patients")
+    patients_count = c.fetchone()[0]
+
+    c.execute("SELECT COUNT(*) FROM staff")
+    staff_count = c.fetchone()[0]
+
+    c.execute("SELECT COUNT(*) FROM appointments")
+    appointments_count = c.fetchone()[0]
+
+    print(f"\n--- Hospital Stats ---")
+    print(f"Total Patients: {patients_count}")
+    print(f"Total Staff: {staff_count}")
+    print(f"Total Appointments: {appointments_count}\n")
+
 # --- Main Menu ---
 def main_menu():
     while True:
@@ -173,7 +221,7 @@ def main_menu():
         print("1. Add Patient  2. View Patients  3. Update Patient  4. Delete Patient")
         print("5. Add Staff    6. View Staff     7. Update Staff   8. Delete Staff")
         print("9. Schedule Appointment  10. View Appointments  11. Cancel Appointment")
-        print("12. Exit")
+        print("12. Exit  13. Search Patient  14. View System Stats")
         choice = input("Enter choice: ")
 
         if choice == '1':
@@ -201,6 +249,10 @@ def main_menu():
         elif choice == '12':
             print("Exiting system.")
             break
+        elif choice == '13':
+            search_patient()
+        elif choice == '14':
+            system_stats()
         else:
             print("Invalid choice.\n")
 
