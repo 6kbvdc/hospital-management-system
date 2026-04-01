@@ -9,8 +9,8 @@ c = conn.cursor()
 c.execute('''
 CREATE TABLE IF NOT EXISTS patients (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    age INTEGER,
+    name TEXT NOT NULL,
+    age INTEGER NOT NULL,
     gender TEXT,
     contact TEXT,
     medical_history TEXT
@@ -20,8 +20,8 @@ CREATE TABLE IF NOT EXISTS patients (
 c.execute('''
 CREATE TABLE IF NOT EXISTS staff (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    role TEXT,
+    name TEXT NOT NULL,
+    role TEXT NOT NULL,
     department TEXT,
     contact TEXT
 )
@@ -39,189 +39,225 @@ CREATE TABLE IF NOT EXISTS appointments (
 )
 ''')
 
+c.execute('''
+CREATE TABLE IF NOT EXISTS history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action TEXT,
+    table_name TEXT,
+    record_id INTEGER,
+    timestamp TEXT
+)
+''')
+
+# --- Utility Functions ---
+def log_action(action, table_name, record_id):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    c.execute("INSERT INTO history (action, table_name, record_id, timestamp) VALUES (?, ?, ?, ?)",
+              (action, table_name, record_id, timestamp))
+    conn.commit()
+
+def get_valid_id(prompt):
+    while True:
+        try:
+            value = int(input(prompt))
+            return value
+        except ValueError:
+            print("Invalid input. Enter a number.")
+
+def get_valid_date(prompt):
+    while True:
+        date_str = input(prompt)
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")
+            return date_str
+        except ValueError:
+            print("Invalid date format. Use YYYY-MM-DD.")
+
+def get_valid_time(prompt):
+    while True:
+        time_str = input(prompt)
+        try:
+            datetime.strptime(time_str, "%H:%M")
+            return time_str
+        except ValueError:
+            print("Invalid time format. Use HH:MM.")
+
 # --- Patient Functions ---
 def add_patient():
-    while True:
-        name = input("Name: ").strip()
-        if not name:
-            print("Name cannot be empty.")
-            continue
-        break
-
-    while True:
-        age = input("Age: ").strip()
-        if not age.isdigit() or int(age) <= 0:
-            print("Invalid age. Must be a positive number.")
-            continue
-        age = int(age)
-        break
-
-    gender = input("Gender: ").strip()
-    contact = input("Contact: ").strip()
-    history = input("Medical history: ").strip()
-
-    c.execute(
-        "INSERT INTO patients (name, age, gender, contact, medical_history) VALUES (?, ?, ?, ?, ?)",
-        (name, age, gender, contact, history)
-    )
+    name = input("Name: ")
+    age = get_valid_id("Age: ")
+    gender = input("Gender: ")
+    contact = input("Contact: ")
+    history_text = input("Medical history: ")
+    c.execute("INSERT INTO patients (name, age, gender, contact, medical_history) VALUES (?, ?, ?, ?, ?)",
+              (name, age, gender, contact, history_text))
     conn.commit()
-    print("Patient added successfully.\n")
+    pid = c.lastrowid
+    log_action("ADD", "patients", pid)
+    print(f"Patient {name} added successfully.\n")
 
 def view_patients():
-    c.execute("SELECT * FROM patients")
-    for row in c.fetchall():
-        print(row)
+    search = input("Search by name (leave blank for all): ").strip()
+    if search:
+        c.execute("SELECT * FROM patients WHERE name LIKE ?", ('%'+search+'%',))
+    else:
+        c.execute("SELECT * FROM patients")
+    rows = c.fetchall()
+    if rows:
+        for row in rows:
+            print(row)
+    else:
+        print("No patients found.")
     print()
 
 def update_patient():
-    pid = input("Enter Patient ID to update: ")
+    pid = get_valid_id("Enter Patient ID to update: ")
     c.execute("SELECT * FROM patients WHERE id=?", (pid,))
-    if c.fetchone() is None:
+    if not c.fetchone():
         print("Patient not found.\n")
         return
-    name = input("New Name: ").strip()
-    age = input("New Age: ").strip()
-    gender = input("New Gender: ").strip()
-    contact = input("New Contact: ").strip()
-    history = input("New Medical history: ").strip()
-    c.execute(
-        "UPDATE patients SET name=?, age=?, gender=?, contact=?, medical_history=? WHERE id=?",
-        (name, age, gender, contact, history, pid)
-    )
+    name = input("New Name: ")
+    age = get_valid_id("New Age: ")
+    gender = input("New Gender: ")
+    contact = input("New Contact: ")
+    history_text = input("New Medical history: ")
+    c.execute("UPDATE patients SET name=?, age=?, gender=?, contact=?, medical_history=? WHERE id=?",
+              (name, age, gender, contact, history_text, pid))
     conn.commit()
+    log_action("UPDATE", "patients", pid)
     print("Patient updated successfully.\n")
 
 def delete_patient():
-    pid = input("Enter Patient ID to delete: ")
+    pid = get_valid_id("Enter Patient ID to delete: ")
+    c.execute("SELECT * FROM patients WHERE id=?", (pid,))
+    if not c.fetchone():
+        print("Patient not found.\n")
+        return
     c.execute("DELETE FROM patients WHERE id=?", (pid,))
     conn.commit()
+    log_action("DELETE", "patients", pid)
     print("Patient deleted successfully.\n")
-
-def search_patient():
-    keyword = input("Enter name or contact to search: ").strip()
-    c.execute(
-        "SELECT * FROM patients WHERE name LIKE ? OR contact LIKE ?",
-        ('%' + keyword + '%', '%' + keyword + '%')
-    )
-    results = c.fetchall()
-    if results:
-        print("Search Results:")
-        for row in results:
-            print(row)
-    else:
-        print("No patients found matching that keyword.\n")
 
 # --- Staff Functions ---
 def add_staff():
-    while True:
-        name = input("Name: ").strip()
-        if not name:
-            print("Name cannot be empty.")
-            continue
-        break
-    role = input("Role (Doctor/Nurse/etc): ").strip()
-    dept = input("Department: ").strip()
-    contact = input("Contact: ").strip()
-    c.execute(
-        "INSERT INTO staff (name, role, department, contact) VALUES (?, ?, ?, ?)",
-        (name, role, dept, contact)
-    )
+    name = input("Name: ")
+    role = input("Role (Doctor/Nurse/etc): ")
+    dept = input("Department: ")
+    contact = input("Contact: ")
+    c.execute("INSERT INTO staff (name, role, department, contact) VALUES (?, ?, ?, ?)",
+              (name, role, dept, contact))
     conn.commit()
+    sid = c.lastrowid
+    log_action("ADD", "staff", sid)
     print("Staff added successfully.\n")
 
 def view_staff():
-    c.execute("SELECT * FROM staff")
-    for row in c.fetchall():
-        print(row)
+    search = input("Search by role (leave blank for all): ").strip()
+    if search:
+        c.execute("SELECT * FROM staff WHERE role LIKE ?", ('%'+search+'%',))
+    else:
+        c.execute("SELECT * FROM staff")
+    rows = c.fetchall()
+    if rows:
+        for row in rows:
+            print(row)
+    else:
+        print("No staff found.")
     print()
 
 def update_staff():
-    sid = input("Enter Staff ID to update: ")
+    sid = get_valid_id("Enter Staff ID to update: ")
     c.execute("SELECT * FROM staff WHERE id=?", (sid,))
-    if c.fetchone() is None:
+    if not c.fetchone():
         print("Staff not found.\n")
         return
-    name = input("New Name: ").strip()
-    role = input("New Role: ").strip()
-    dept = input("New Department: ").strip()
-    contact = input("New Contact: ").strip()
-    c.execute(
-        "UPDATE staff SET name=?, role=?, department=?, contact=? WHERE id=?",
-        (name, role, dept, contact, sid)
-    )
+    name = input("New Name: ")
+    role = input("New Role: ")
+    dept = input("New Department: ")
+    contact = input("New Contact: ")
+    c.execute("UPDATE staff SET name=?, role=?, department=?, contact=? WHERE id=?",
+              (name, role, dept, contact, sid))
     conn.commit()
+    log_action("UPDATE", "staff", sid)
     print("Staff updated successfully.\n")
 
 def delete_staff():
-    sid = input("Enter Staff ID to delete: ")
+    sid = get_valid_id("Enter Staff ID to delete: ")
+    c.execute("SELECT * FROM staff WHERE id=?", (sid,))
+    if not c.fetchone():
+        print("Staff not found.\n")
+        return
     c.execute("DELETE FROM staff WHERE id=?", (sid,))
     conn.commit()
+    log_action("DELETE", "staff", sid)
     print("Staff deleted successfully.\n")
 
 # --- Appointment Functions ---
 def schedule_appointment():
     view_patients()
-    pid = input("Select Patient ID: ")
+    pid = get_valid_id("Select Patient ID: ")
     view_staff()
-    sid = input("Select Staff ID: ")
-    date = input("Date (YYYY-MM-DD): ")
-    time = input("Time (HH:MM): ")
-
-    try:
-        datetime.strptime(date, "%Y-%m-%d")
-        datetime.strptime(time, "%H:%M")
-    except:
-        print("Invalid date or time format.\n")
-        return
-
-    c.execute(
-        "INSERT INTO appointments (patient_id, staff_id, date, time) VALUES (?, ?, ?, ?)",
-        (pid, sid, date, time)
-    )
+    sid = get_valid_id("Select Staff ID: ")
+    date = get_valid_date("Date (YYYY-MM-DD): ")
+    time = get_valid_time("Time (HH:MM): ")
+    c.execute("INSERT INTO appointments (patient_id, staff_id, date, time) VALUES (?, ?, ?, ?)",
+              (pid, sid, date, time))
     conn.commit()
+    aid = c.lastrowid
+    log_action("ADD", "appointments", aid)
     print("Appointment scheduled successfully.\n")
 
 def view_appointments():
-    c.execute('''
+    date_filter = input("Filter by date (YYYY-MM-DD) or leave blank: ").strip()
+    query = '''
         SELECT a.id, p.name, s.name, a.date, a.time
         FROM appointments a
         JOIN patients p ON a.patient_id = p.id
         JOIN staff s ON a.staff_id = s.id
-    ''')
-    for row in c.fetchall():
-        print(row)
+    '''
+    if date_filter:
+        query += " WHERE a.date=?"
+        c.execute(query, (date_filter,))
+    else:
+        c.execute(query)
+    rows = c.fetchall()
+    if rows:
+        for row in rows:
+            print(row)
+    else:
+        print("No appointments found.")
     print()
 
 def cancel_appointment():
-    aid = input("Enter Appointment ID to cancel: ")
+    aid = get_valid_id("Enter Appointment ID to cancel: ")
+    c.execute("SELECT * FROM appointments WHERE id=?", (aid,))
+    if not c.fetchone():
+        print("Appointment not found.\n")
+        return
     c.execute("DELETE FROM appointments WHERE id=?", (aid,))
     conn.commit()
+    log_action("DELETE", "appointments", aid)
     print("Appointment canceled successfully.\n")
 
-# --- System Stats ---
-def system_stats():
-    c.execute("SELECT COUNT(*) FROM patients")
-    patients_count = c.fetchone()[0]
-
-    c.execute("SELECT COUNT(*) FROM staff")
-    staff_count = c.fetchone()[0]
-
-    c.execute("SELECT COUNT(*) FROM appointments")
-    appointments_count = c.fetchone()[0]
-
-    print(f"\n--- Hospital Stats ---")
-    print(f"Total Patients: {patients_count}")
-    print(f"Total Staff: {staff_count}")
-    print(f"Total Appointments: {appointments_count}\n")
+# --- Commit History Function ---
+def view_history():
+    c.execute("SELECT * FROM history ORDER BY timestamp DESC")
+    rows = c.fetchall()
+    if rows:
+        for row in rows:
+            print(row)
+    else:
+        print("No history found.")
+    print()
 
 # --- Main Menu ---
 def main_menu():
     while True:
         print("=== Hospital Management System ===")
-        print("1. Add Patient  2. View Patients  3. Update Patient  4. Delete Patient")
-        print("5. Add Staff    6. View Staff     7. Update Staff   8. Delete Staff")
-        print("9. Schedule Appointment  10. View Appointments  11. Cancel Appointment")
-        print("12. Exit  13. Search Patient  14. View System Stats")
+        print("1. Add Patient      2. View Patients      3. Update Patient      4. Delete Patient")
+        print("5. Add Staff        6. View Staff         7. Update Staff        8. Delete Staff")
+        print("9. Schedule Appointment   10. View Appointments   11. Cancel Appointment")
+        print("12. View Commit History   13. Exit")
         choice = input("Enter choice: ")
 
         if choice == '1':
@@ -247,15 +283,14 @@ def main_menu():
         elif choice == '11':
             cancel_appointment()
         elif choice == '12':
+            view_history()
+        elif choice == '13':
             print("Exiting system.")
             break
-        elif choice == '13':
-            search_patient()
-        elif choice == '14':
-            system_stats()
         else:
             print("Invalid choice.\n")
 
 if __name__ == "__main__":
     main_menu()
     conn.close()
+    
